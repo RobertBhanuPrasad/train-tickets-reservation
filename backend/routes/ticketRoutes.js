@@ -1,8 +1,10 @@
+// ticketRoutes.js
 const express = require("express");
-const { getTickets } = require("../controllers/ticketController");
+const { getTrains, bookTicket } = require("../controllers/ticketController");
 
 const router = express.Router();
 
-router.get("/", getTickets);
+router.get("/", getTrains); // Fetch available trains
+router.post("/", bookTicket); // Book a ticket
 
-module.exports = router; 
+module.exports = router;
