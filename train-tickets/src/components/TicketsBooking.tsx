@@ -1,4 +1,4 @@
-"use client";
+"use client"
 import React, { useState, useEffect } from "react";
 import { Button, Form, Alert } from "react-bootstrap";
 import { useRouter } from 'next/navigation';
@@ -16,6 +16,7 @@ const TicketBookingPage = () => {
   const [user, setUser] = useState<string | null>(null); // Track current logged-in user
   const [bookedSeats, setBookedSeats] = useState<number[]>([]);
 
+  //it is used to fetch the data of the logged in user
   useEffect(() => {
     const fetchTickets = async () => {
       if (!user) return;
@@ -40,7 +41,11 @@ const TicketBookingPage = () => {
 
       } catch (error) {
         console.error("Error fetching tickets:", error);
-        setError(error.message);
+        if (error instanceof Error) {
+          setError(error.message);
+        } else {
+          setError("An unknown error occurred.");
+        }
       }
     };
 
@@ -145,18 +150,53 @@ const TicketBookingPage = () => {
         throw new Error("Failed to book tickets.");
       }
     } catch (err) {
-      setError(err.message || "An error occurred during booking.");
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("An error occurred during booking.");
+      }
     }
   };
 
 
-  const handleReset = () => {
-    setSeatMap(generateSeatMap());
-    setBookedTickets(0);
-    setAvailableTickets(totalSeats);
-    setTicketsToBook(0);
-    setError("");
+  const handleReset = async () => {
+    try {
+      const userId = localStorage.getItem("userId"); // Assuming userId is stored in localStorage
+  
+      if (!userId) {
+        setError("User ID is not available. Please log in again.");
+        return;
+      }
+  
+      // Call the API to delete all tickets for the user
+      const response = await fetch("http://localhost:5000/api/tickets/delete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ userId }),
+      });
+  
+      const data = await response.json();
+  
+      if (!response.ok) {
+        setError(data.error || "Failed to reset tickets.");
+        return;
+      }
+  
+      // Reset the state
+      setSeatMap(generateSeatMap());
+      setBookedTickets(0);
+      setAvailableTickets(totalSeats);
+      setTicketsToBook(0);
+      window.location.reload();
+      setError("");
+    } catch (err) {
+      console.error("Error resetting tickets:", err);
+      setError("An error occurred while resetting tickets.");
+    }
   };
+  
 
   const handleLogin = () => {
     const storedUserId = localStorage.getItem("userId");
@@ -173,6 +213,7 @@ const TicketBookingPage = () => {
     setBookedSeats([]);
     setBookedTickets(0);
     setAvailableTickets(totalSeats);
+    localStorage.clear(); // Clears all keys and values in Local Storage
   };
 
   return (

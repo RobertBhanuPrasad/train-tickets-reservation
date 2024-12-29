@@ -30,8 +30,8 @@ export default function Login() {
 
       if (response.ok) {
         localStorage.setItem("userId", data.userId); 
-        // If login is successful, redirect to the /tickets page
-        router.push("/tickets");
+        // If login is successful, redirect to the / page
+        router.push("/");
       } else {
         // If there's an error, display the error message
         setError(data.message || "Login failed. Please try again.");

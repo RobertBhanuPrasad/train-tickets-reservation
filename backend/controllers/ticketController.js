@@ -77,5 +77,25 @@ const bookTicket = async (req, res) => {
   }
 };
 
+const deleteUserTickets = async (req, res) => {
+  const { userId } = req.body;
 
-module.exports = { getTickets, getTicketById, bookTicket };
+  if (!userId) {
+    return res.status(400).json({ error: "User ID is required." });
+  }
+
+  try {
+    // Delete all rows for the given userId
+    const result = await pool.query(
+      `DELETE FROM tickets WHERE user_id = $1`,
+      [userId]
+    );
+
+    res.status(200).json({ message: "All tickets for the user have been deleted." });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to delete tickets", details: err.message });
+  }
+};
+
+
+module.exports = { getTickets, getTicketById, bookTicket, deleteUserTickets };

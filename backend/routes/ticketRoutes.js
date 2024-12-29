@@ -1,5 +1,5 @@
 const express = require("express");
-const { getTickets, getTicketById, bookTicket } = require("../controllers/ticketController");
+const { getTickets, getTicketById, bookTicket, deleteUserTickets } = require("../controllers/ticketController");
 
 const router = express.Router();
 
@@ -11,5 +11,7 @@ router.get("/:id", getTicketById);
 
 // Book a new ticket
 router.post("/bootTicket", bookTicket);
+
+router.post("/delete", deleteUserTickets)
 
 module.exports = router;
