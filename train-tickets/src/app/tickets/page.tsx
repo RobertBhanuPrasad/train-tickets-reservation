@@ -1,8 +1,10 @@
 "use client";
 import React, { useState } from "react";
 import { Button, Form, Alert } from "react-bootstrap";
+import { useRouter } from 'next/navigation';;
 
 const TicketBookingPage = () => {
+  const router = useRouter()
   const totalSeats = 80;
   const rows = 12;
   const seatsInRow = [7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 3]; // 12th row has 3 seats
@@ -12,6 +14,7 @@ const TicketBookingPage = () => {
   const [error, setError] = useState("");
   const [seatMap, setSeatMap] = useState(generateSeatMap()); // Seat map to track availability
   const [user, setUser] = useState(null); // Track current logged-in user
+  const [bookedSeats, setBookedSeats] = useState<number[]>([]);
 
   function generateSeatMap() {
     const seatMap = [];
@@ -29,6 +32,7 @@ const TicketBookingPage = () => {
   const handleBooking = () => {
     if (!user) {
       setError("Please log in to book tickets.");
+      router.push("/login"); // Redirect to login page
       return;
     }
     if (ticketsToBook <= 0) {
@@ -40,6 +44,7 @@ const TicketBookingPage = () => {
     }
 
     let booked = false;
+    const newlyBookedSeats = [];
 
     // Try to book tickets row by row
     for (let rowIndex = 0; rowIndex < rows; rowIndex++) {
@@ -54,6 +59,7 @@ const TicketBookingPage = () => {
           for (let seatIndex = 0; seatIndex < rowSeats.length; seatIndex++) {
             if (!rowSeats[seatIndex] && count < ticketsToBook) {
               rowSeats[seatIndex] = true; // Book this seat
+              newlyBookedSeats.push(rowIndex * 7 + seatIndex + 1); // Add booked seat number to the array
               count++;
             }
           }
@@ -76,6 +82,7 @@ const TicketBookingPage = () => {
         for (let seatIndex = 0; seatIndex < rowSeats.length; seatIndex++) {
           if (!rowSeats[seatIndex] && remainingSeatsToBook > 0) {
             rowSeats[seatIndex] = true; // Book this seat
+            newlyBookedSeats.push(rowIndex * 7 + seatIndex + 1); // Add booked seat number
             bookedSeats++;
             remainingSeatsToBook--;
           }
@@ -92,9 +99,11 @@ const TicketBookingPage = () => {
       }
     }
 
+    setBookedSeats(newlyBookedSeats); // Update booked seats after booking
     setTicketsToBook(0);
     setError(""); // Clear error on successful booking
   };
+
 
   // Reset booking function
   const handleReset = () => {
@@ -109,6 +118,7 @@ const TicketBookingPage = () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleLogin = (username: any) => {
     setUser(username);
+    router.push("/login")
   };
 
   const handleLogout = () => {
@@ -221,6 +231,20 @@ const TicketBookingPage = () => {
             </div>
           </div>
 
+          {/* Display booked seats */}
+          {bookedSeats.length > 0 && (
+            <div className="flex mt-4">
+              <strong>Booked Seats:</strong>
+              <div className="ml-4 flex flex-wrap gap-2">
+                {bookedSeats.map((seat) => (
+                  <div key={seat} className="w-12 h-12 flex items-center justify-center m-1 font-bold text-white bg-yellow-500 rounded-lg">
+                    {seat}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Reset button */}
           <div className="mt-3">
             <Button
@@ -233,7 +257,7 @@ const TicketBookingPage = () => {
           </div>
         </div>
       </div>
-    </div>
+      </div>
   );
 };
 
