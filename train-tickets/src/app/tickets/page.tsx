@@ -1,10 +1,10 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button, Form, Alert } from "react-bootstrap";
-import { useRouter } from 'next/navigation';;
+import { useRouter } from 'next/navigation';
 
 const TicketBookingPage = () => {
-  const router = useRouter()
+  const router = useRouter();
   const totalSeats = 80;
   const rows = 12;
   const seatsInRow = [7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 3]; // 12th row has 3 seats
@@ -13,26 +13,57 @@ const TicketBookingPage = () => {
   const [ticketsToBook, setTicketsToBook] = useState(0);
   const [error, setError] = useState("");
   const [seatMap, setSeatMap] = useState(generateSeatMap()); // Seat map to track availability
-  const [user, setUser] = useState(null); // Track current logged-in user
+  const [user, setUser] = useState<string | null>(null); // Track current logged-in user
   const [bookedSeats, setBookedSeats] = useState<number[]>([]);
 
-  function generateSeatMap() {
+  useEffect(() => {
+    const fetchTickets = async () => {
+      if (!user) return;
+
+      try {
+        const response = await fetch(`http://localhost:5000/api/tickets?user_id=${user}`);
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch tickets: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log("Fetched data:", data); // This should log the fetched data
+
+        // Assuming data.bookedSeats is an array of booked seat identifiers
+        const bookedSeatsArray = data.bookedSeats || [];
+        setBookedSeats(bookedSeatsArray);
+
+        // Update seat map to mark booked seats
+        const updatedSeatMap = generateSeatMap(bookedSeatsArray);
+        setSeatMap(updatedSeatMap);
+
+      } catch (error) {
+        console.error("Error fetching tickets:", error);
+        setError(error.message);
+      }
+    };
+
+    fetchTickets();
+  }, [user]);
+
+  function generateSeatMap(bookedSeats = []) {
     const seatMap = [];
     for (let i = 0; i < rows; i++) {
       const rowSeats = [];
       for (let j = 0; j < seatsInRow[i]; j++) {
-        rowSeats.push(false); // False means the seat is available
+        rowSeats.push(bookedSeats.includes(i * 7 + j + 1)); // Mark as booked if in bookedSeats
       }
       seatMap.push(rowSeats);
     }
     return seatMap;
   }
 
-  // Book tickets function
-  const handleBooking = () => {
+  //tickets booking function
+  const handleBooking = async () => {
+    const storedUserId = localStorage.getItem("userId");
     if (!user) {
       setError("Please log in to book tickets.");
-      router.push("/login"); // Redirect to login page
       return;
     }
     if (ticketsToBook <= 0) {
@@ -54,12 +85,11 @@ const TicketBookingPage = () => {
       if (seatsInRow[rowIndex] === 7) {
         const availableSeatsInRow = rowSeats.filter((seat) => !seat);
         if (availableSeatsInRow.length >= ticketsToBook) {
-          // Book the tickets in this row
           let count = 0;
           for (let seatIndex = 0; seatIndex < rowSeats.length; seatIndex++) {
             if (!rowSeats[seatIndex] && count < ticketsToBook) {
               rowSeats[seatIndex] = true; // Book this seat
-              newlyBookedSeats.push(rowIndex * 7 + seatIndex + 1); // Add booked seat number to the array
+              newlyBookedSeats.push(rowIndex * 7 + seatIndex + 1);
               count++;
             }
           }
@@ -71,58 +101,78 @@ const TicketBookingPage = () => {
       }
     }
 
-    // Fallback to nearby seats if we can't book in a single row
     if (!booked) {
       let remainingSeatsToBook = ticketsToBook;
-      let bookedSeats = 0;
 
       for (let rowIndex = 0; rowIndex < rows; rowIndex++) {
         const rowSeats = seatMap[rowIndex];
-
         for (let seatIndex = 0; seatIndex < rowSeats.length; seatIndex++) {
           if (!rowSeats[seatIndex] && remainingSeatsToBook > 0) {
             rowSeats[seatIndex] = true; // Book this seat
-            newlyBookedSeats.push(rowIndex * 7 + seatIndex + 1); // Add booked seat number
-            bookedSeats++;
+            newlyBookedSeats.push(rowIndex * 7 + seatIndex + 1);
             remainingSeatsToBook--;
           }
         }
-
         if (remainingSeatsToBook === 0) break;
       }
 
-      if (bookedSeats === ticketsToBook) {
-        setBookedTickets(bookedTickets + bookedSeats);
-        setAvailableTickets(availableTickets - bookedSeats);
+      if (remainingSeatsToBook === 0) {
+        setBookedTickets(bookedTickets + ticketsToBook);
+        setAvailableTickets(availableTickets - ticketsToBook);
       } else {
         setError("Not enough adjacent seats available.");
+        return;
       }
     }
 
-    setBookedSeats(newlyBookedSeats); // Update booked seats after booking
+    setBookedSeats([...bookedSeats, ...newlyBookedSeats]); // Add newly booked seats
     setTicketsToBook(0);
-    setError(""); // Clear error on successful booking
+    setError("");
+
+    // POST booked tickets to the database
+    try {
+      const response = await fetch("http://localhost:5000/api/tickets/bootTicket", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_id: storedUserId,  // Assuming `user` contains the user's data, and `id` is the user's unique ID
+          seat_number: newlyBookedSeats,
+          booking_date: new Date().toISOString(), // Use current date as booking date
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to book tickets.");
+      }
+    } catch (err) {
+      setError(err.message || "An error occurred during booking.");
+    }
   };
 
 
-  // Reset booking function
   const handleReset = () => {
     setSeatMap(generateSeatMap());
     setBookedTickets(0);
     setAvailableTickets(totalSeats);
     setTicketsToBook(0);
-    setError(""); // Clear error when resetting
+    setError("");
   };
 
-  // Login and Signup functions (basic example)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const handleLogin = (username: any) => {
-    setUser(username);
-    router.push("/login")
+  const handleLogin = () => {
+    const storedUserId = localStorage.getItem("userId");
+    if (storedUserId) {
+      setUser(storedUserId); // Set user ID in state
+    } else {
+      router.push("/login");
+    }
   };
 
   const handleLogout = () => {
     setUser(null);
+    setSeatMap(generateSeatMap());
+    setBookedSeats([]);
+    setBookedTickets(0);
+    setAvailableTickets(totalSeats);
   };
 
   return (
@@ -133,13 +183,13 @@ const TicketBookingPage = () => {
 
       {!user ? (
         <div className="text-center">
-          <Button onClick={() => handleLogin("user123")} className="px-6 py-2 bg-blue-500 text-white rounded-lg">
+          <Button onClick={() => handleLogin()} className="px-6 py-2 bg-blue-500 text-white rounded-lg">
             Login
           </Button>
         </div>
       ) : (
         <div className="text-center">
-          <h4>Welcome, {user}</h4>
+          <h4>Welcome - user no. : {user}</h4>
           <Button variant="danger" onClick={handleLogout} className="mt-2 px-6 py-2 bg-red-500 text-white rounded-lg">
             Logout
           </Button>
@@ -200,10 +250,10 @@ const TicketBookingPage = () => {
           {/* Display the booking status */}
           <div className="flex gap-6 mt-4 justify-center sm:justify-center">
             <div className="flex items-center justify-center w-60 h-12 bg-yellow-500 text-black font-bold rounded-lg">
-              <strong>Booked Tickets:</strong> {bookedTickets}
+              <strong>Booked Tickets:</strong> {bookedTickets} {bookedSeats?.length}
             </div>
             <div className="flex items-center justify-center w-60 h-12 bg-green-500 text-black font-bold rounded-lg">
-              <strong>Available Tickets:</strong> {availableTickets}
+              <strong>Available Tickets:</strong> {availableTickets} {80 - bookedSeats?.length}
             </div>
           </div>
         </div>
@@ -219,19 +269,18 @@ const TicketBookingPage = () => {
                 placeholder="Enter number of tickets"
                 value={ticketsToBook}
                 onChange={(e) => setTicketsToBook(Number(e.target.value))}
-                className="w-full md:w-52 p-2 text-black border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full md:w-52 p-2 border rounded-md text-black"
               />
               <Button
-                variant="primary"
+                variant="success"
                 onClick={handleBooking}
                 className="ml-4 px-6 py-2 text-white bg-blue-500 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-75 rounded-lg"
               >
-                Book
+                Book Tickets
               </Button>
             </div>
           </div>
 
-          {/* Display booked seats */}
           {bookedSeats.length > 0 && (
             <div className="flex mt-4">
               <strong>Booked Seats:</strong>
@@ -245,19 +294,17 @@ const TicketBookingPage = () => {
             </div>
           )}
 
-          {/* Reset button */}
-          <div className="mt-3">
-            <Button
-              variant="secondary"
-              onClick={handleReset}
-              className="px-6 py-2 text-white bg-gray-500 hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-75 rounded-lg"
-            >
-              Reset Booking
-            </Button>
-          </div>
+          {/* Reset */}
+          <Button
+            variant="secondary"
+            onClick={handleReset}
+            className="px-6 py-2 text-white bg-gray-500 hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-75 rounded-lg"
+          >
+            Reset
+          </Button>
         </div>
       </div>
-      </div>
+    </div>
   );
 };
 

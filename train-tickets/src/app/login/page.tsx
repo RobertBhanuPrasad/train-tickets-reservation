@@ -29,6 +29,7 @@ export default function Login() {
       const data = await response.json();
 
       if (response.ok) {
+        localStorage.setItem("userId", data.userId); 
         // If login is successful, redirect to the /tickets page
         router.push("/tickets");
       } else {

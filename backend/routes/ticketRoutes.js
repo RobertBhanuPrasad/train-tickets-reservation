@@ -1,10 +1,15 @@
-// ticketRoutes.js
 const express = require("express");
-const { getTrains, bookTicket } = require("../controllers/ticketController");
+const { getTickets, getTicketById, bookTicket } = require("../controllers/ticketController");
 
 const router = express.Router();
 
-router.get("/", getTrains); // Fetch available trains
-router.post("/", bookTicket); // Book a ticket
+// Fetch all tickets or filter by query parameters
+router.get("/", getTickets);
+
+// Fetch a specific ticket by ID
+router.get("/:id", getTicketById);
+
+// Book a new ticket
+router.post("/bootTicket", bookTicket);
 
 module.exports = router;
