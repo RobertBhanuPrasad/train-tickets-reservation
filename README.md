@@ -14,6 +14,7 @@
  - Setup and Running the Project
  - How to Use
  - Code Structure and Contribution
+   
 ## Features
 
 - **Dynamic Seat Booking**: Allows users to book seats and visually highlights booked seats in yellow.
@@ -162,14 +163,3 @@ Javascript, HTML, CSS, Typescript, Next js, Tailwind CSS, Supabase, Node js, Pos
 
 For support, email robertbhanuprasad0108@gmail.com.
 
-
-## Table of Contents
-    
- - Features
- - Technologies Used
- - Installation
- - Project Structure
- - Environment Variables
- - Setup and Running the Project
- - How to Use
- - Code Structure and Contribution
