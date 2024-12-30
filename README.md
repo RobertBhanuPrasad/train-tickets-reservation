@@ -138,7 +138,7 @@ This project is used by the following companies:
 - **Dynamic Feedback:** Observe seat status updates in real-time with visual highlights.
 ## Demo
 
-Insert gif or link to demo
+**Link:** - https://drive.google.com/file/d/1tzB0PmZVDaWUkksjg7GU3gDWmIbWcBNN/view?usp=sharing
 
 
 # Hi, I'm Robert! 👋
